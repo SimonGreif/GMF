@@ -344,155 +344,355 @@ animation: cloudFloat 3s ease-out forwards;
     o.start(t0); o.stop(t0 + dur + 0.05);
   }
 
+  // ── Helper: tremolo fart core ─────────────────────────────────────────────
+  // baseFreq: fundamental Hz, tremRate: wobble speed, dur: seconds
+  // This is the key to realistic farts: amplitude-modulated low noise + sawtooth
+  function fartCore(ctx, t, baseFreq, tremRate, dur, vol) {
+    // Noise layer (the "air/breath" component)
+    var n = Math.ceil(ctx.sampleRate * dur);
+    var buf = ctx.createBuffer(1, n, ctx.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    var nSrc = ctx.createBufferSource();
+    nSrc.buffer = buf;
+    var nFilt = ctx.createBiquadFilter();
+    nFilt.type = 'bandpass';
+    nFilt.frequency.value = baseFreq * 1.5;
+    nFilt.Q.value = 1.2;
+    var nGain = ctx.createGain();
+    nGain.gain.setValueAtTime(vol * 0.4, t);
+    nGain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    nSrc.connect(nFilt); nFilt.connect(nGain); nGain.connect(dest());
+    nSrc.start(t); nSrc.stop(t + dur + 0.05);
+
+    // Oscillator layer (the "body" tone)
+    var osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.value = baseFreq;
+
+    // LFO for tremolo (creates the "brrrp" flutter)
+    var lfo = ctx.createOscillator();
+    var lfoGain = ctx.createGain();
+    lfo.frequency.value = tremRate;
+    lfoGain.gain.value = vol * 0.5;
+    lfo.connect(lfoGain);
+
+    var oscGain = ctx.createGain();
+    oscGain.gain.setValueAtTime(vol * 0.6, t);
+    oscGain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    lfoGain.connect(oscGain.gain);
+
+    osc.connect(oscGain); oscGain.connect(dest());
+    lfo.start(t); osc.start(t);
+    osc.stop(t + dur + 0.05); lfo.stop(t + dur + 0.05);
+  }
+
   // ── Sound definitions ──────────────────────────────────────────────────────
   var SOUNDS = [
     {
-      name: 'The Sneaky One', emoji: '🤫', color: '#4dffb4',
+      name: 'The Classic', emoji: '💨', color: '#ffe94d',
       fn: function(ctx) {
+        // Standard medium fart: starts strong, tapers off
         var t = ctx.currentTime;
-        noise(ctx, t, 1.4, 0.25, 60, 250);
-        tone(ctx, t, 'sawtooth', 110, 70, 1.4, 0.2);
+        var o = ctx.createOscillator();
+        var lfo = ctx.createOscillator();
+        var lfoG = ctx.createGain();
+        var g = ctx.createGain();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(120, t);
+        o.frequency.exponentialRampToValueAtTime(75, t + 0.7);
+        lfo.frequency.value = 28; lfoG.gain.value = 0.4;
+        lfo.connect(lfoG); lfoG.connect(g.gain);
+        g.gain.setValueAtTime(0.7, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+        o.connect(g); g.connect(dest());
+        noise(ctx, t, 0.7, 0.5, 80, 400);
+        lfo.start(t); o.start(t); o.stop(t + 0.75); lfo.stop(t + 0.75);
       }
     },
     {
       name: 'The Ripper', emoji: '💥', color: '#ff4fa3',
       fn: function(ctx) {
+        // Short, explosive, loud – high pressure release
         var t = ctx.currentTime;
-        noise(ctx, t, 0.5, 0.8, 80, 900);
-        tone(ctx, t, 'square', 90, 35, 0.5, 0.4);
+        var o = ctx.createOscillator();
+        var lfo = ctx.createOscillator();
+        var lfoG = ctx.createGain();
+        var g = ctx.createGain();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(160, t);
+        o.frequency.exponentialRampToValueAtTime(60, t + 0.35);
+        lfo.frequency.value = 55; lfoG.gain.value = 0.5;
+        lfo.connect(lfoG); lfoG.connect(g.gain);
+        g.gain.setValueAtTime(0.9, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+        o.connect(g); g.connect(dest());
+        noise(ctx, t, 0.35, 0.8, 100, 800);
+        lfo.start(t); o.start(t); o.stop(t + 0.4); lfo.stop(t + 0.4);
       }
     },
     {
-      name: 'The Trumpet', emoji: '🎺', color: '#ffe94d',
+      name: 'The Long One', emoji: '😮‍💨', color: '#4db8ff',
       fn: function(ctx) {
+        // Slow, sustained, trailing off – the "sigh" fart
         var t = ctx.currentTime;
-        [180, 165, 148, 132, 118, 105, 92, 82].forEach(function(f, i) {
-          tone(ctx, t + i * 0.09, 'sawtooth', f, f * 0.85, 0.14, 0.35);
-        });
-      }
-    },
-    {
-      name: 'The Machine Gun', emoji: '🔫', color: '#ff8c42',
-      fn: function(ctx) {
-        var t = ctx.currentTime;
-        for (var i = 0; i < 9; i++) noise(ctx, t + i * 0.07, 0.06, 0.55, 60, 350);
+        var o = ctx.createOscillator();
+        var lfo = ctx.createOscillator();
+        var lfoG = ctx.createGain();
+        var g = ctx.createGain();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(100, t);
+        o.frequency.linearRampToValueAtTime(110, t + 0.5);
+        o.frequency.exponentialRampToValueAtTime(55, t + 2.2);
+        lfo.frequency.value = 18; lfoG.gain.value = 0.3;
+        lfo.connect(lfoG); lfoG.connect(g.gain);
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.65, t + 0.1);
+        g.gain.setValueAtTime(0.55, t + 1.5);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 2.2);
+        o.connect(g); g.connect(dest());
+        noise(ctx, t, 2.2, 0.35, 60, 300);
+        lfo.start(t); o.start(t); o.stop(t + 2.25); lfo.stop(t + 2.25);
       }
     },
     {
       name: 'The Squeaker', emoji: '🐭', color: '#c94dff',
       fn: function(ctx) {
+        // Very brief, high-pitched – clenched cheeks
         var t = ctx.currentTime;
-        tone(ctx, t, 'sine', 700, 180, 0.28, 0.35);
-        tone(ctx, t + 0.01, 'sine', 580, 150, 0.28, 0.15);
-      }
-    },
-    {
-      name: 'The Rumble', emoji: '🌋', color: '#4db8ff',
-      fn: function(ctx) {
-        var t = ctx.currentTime;
-        noise(ctx, t, 2.8, 0.45, 25, 100);
         var o = ctx.createOscillator();
         var lfo = ctx.createOscillator();
         var lfoG = ctx.createGain();
         var g = ctx.createGain();
-        lfo.frequency.value = 7; lfoG.gain.value = 12;
-        lfo.connect(lfoG); lfoG.connect(o.frequency);
-        o.type = 'triangle'; o.frequency.value = 55;
-        g.gain.setValueAtTime(0, t);
-        g.gain.linearRampToValueAtTime(0.4, t + 0.4);
-        g.gain.setValueAtTime(0.35, t + 1.8);
-        g.gain.linearRampToValueAtTime(0, t + 2.8);
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(320, t);
+        o.frequency.exponentialRampToValueAtTime(180, t + 0.18);
+        lfo.frequency.value = 45; lfoG.gain.value = 0.4;
+        lfo.connect(lfoG); lfoG.connect(g.gain);
+        g.gain.setValueAtTime(0.6, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
         o.connect(g); g.connect(dest());
-        lfo.start(t); o.start(t); o.stop(t + 2.85); lfo.stop(t + 2.85);
+        noise(ctx, t, 0.18, 0.4, 200, 900);
+        lfo.start(t); o.start(t); o.stop(t + 0.22); lfo.stop(t + 0.22);
       }
     },
     {
       name: 'The Wet One', emoji: '💦', color: '#4dffb4',
       fn: function(ctx) {
+        // Moist, bubbling – lots of high noise, interrupted tone
         var t = ctx.currentTime;
-        noise(ctx, t, 1.0, 0.55, 100, 700);
-        var o = ctx.createOscillator();
-        var filt = ctx.createBiquadFilter();
-        var g = ctx.createGain();
-        filt.type = 'bandpass'; filt.frequency.value = 280; filt.Q.value = 2.5;
-        o.type = 'sawtooth';
-        o.frequency.setValueAtTime(100, t);
-        o.frequency.linearRampToValueAtTime(135, t + 0.15);
-        o.frequency.linearRampToValueAtTime(88,  t + 0.4);
-        o.frequency.linearRampToValueAtTime(115, t + 0.65);
-        o.frequency.linearRampToValueAtTime(90,  t + 0.9);
-        g.gain.setValueAtTime(0.35, t);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 1.0);
-        o.connect(filt); filt.connect(g); g.connect(dest());
-        o.start(t); o.stop(t + 1.05);
+        noise(ctx, t, 0.9, 0.7, 150, 1200);
+        // Interrupted bursts simulating liquid bubbles
+        [0, 0.08, 0.17, 0.27, 0.38, 0.5, 0.63, 0.75].forEach(function(dt, i) {
+          var o = ctx.createOscillator();
+          var g = ctx.createGain();
+          o.type = 'sawtooth';
+          o.frequency.value = 130 - i * 5;
+          var bDur = 0.06 + Math.random() * 0.04;
+          g.gain.setValueAtTime(0.5, t + dt);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + dt + bDur);
+          o.connect(g); g.connect(dest());
+          o.start(t + dt); o.stop(t + dt + bDur + 0.02);
+        });
       }
     },
     {
       name: 'The Silent Killer', emoji: '☠️', color: '#aaaaaa',
       fn: function(ctx) {
+        // Almost inaudible low rumble – you know it's there
         var t = ctx.currentTime;
-        noise(ctx, t, 3.0, 0.06, 20, 80);
-        tone(ctx, t, 'sine', 28, 22, 3.0, 0.12);
+        noise(ctx, t, 3.5, 0.12, 20, 90);
+        var o = ctx.createOscillator();
+        var g = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = 45;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.18, t + 0.8);
+        g.gain.setValueAtTime(0.15, t + 2.5);
+        g.gain.linearRampToValueAtTime(0, t + 3.5);
+        o.connect(g); g.connect(dest());
+        o.start(t); o.stop(t + 3.6);
       }
     },
     {
-      name: 'The Opera', emoji: '🎭', color: '#ff4fa3',
+      name: 'The Machine Gun', emoji: '🔫', color: '#ff8c42',
       fn: function(ctx) {
+        // Rapid-fire short bursts – cheeks flapping
         var t = ctx.currentTime;
-        [195, 215, 195, 175, 165, 150, 138, 128, 118].forEach(function(f, i) {
-          tone(ctx, t + i * 0.11, 'sawtooth', f, f * 0.9, 0.16, 0.3);
+        var gaps = [0, 0.11, 0.21, 0.30, 0.38, 0.45, 0.51, 0.56, 0.60, 0.63];
+        gaps.forEach(function(dt, i) {
+          var o = ctx.createOscillator();
+          var lfo = ctx.createOscillator();
+          var lfoG = ctx.createGain();
+          var g = ctx.createGain();
+          o.type = 'sawtooth';
+          o.frequency.value = 140 - i * 8;
+          lfo.frequency.value = 40; lfoG.gain.value = 0.3;
+          lfo.connect(lfoG); lfoG.connect(g.gain);
+          var bDur = 0.07;
+          g.gain.setValueAtTime(0.6, t + dt);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + dt + bDur);
+          o.connect(g); g.connect(dest());
+          noise(ctx, t + dt, bDur, 0.4, 80, 500);
+          lfo.start(t + dt); o.start(t + dt);
+          o.stop(t + dt + bDur + 0.02); lfo.stop(t + dt + bDur + 0.02);
         });
       }
     },
     {
-      name: 'The Staccato', emoji: '🥁', color: '#ff8c42',
+      name: 'The Rumbler', emoji: '🌋', color: '#ff8c42',
       fn: function(ctx) {
+        // Deep, prolonged, belly-shaking
         var t = ctx.currentTime;
-        [0, 0.05, 0.09, 0.13, 0.16, 0.185, 0.205, 0.222, 0.237, 0.25, 0.262].forEach(function(dt, i) {
-          noise(ctx, t + dt, 0.04, Math.max(0.55 - i * 0.04, 0.1), 60, 500);
-        });
+        noise(ctx, t, 2.5, 0.4, 30, 150);
+        var o = ctx.createOscillator();
+        var lfo = ctx.createOscillator();
+        var lfoG = ctx.createGain();
+        var g = ctx.createGain();
+        o.type = 'sawtooth'; o.frequency.value = 70;
+        o.frequency.setValueAtTime(70, t);
+        o.frequency.linearRampToValueAtTime(80, t + 0.6);
+        o.frequency.exponentialRampToValueAtTime(50, t + 2.5);
+        lfo.frequency.value = 14; lfoG.gain.value = 0.45;
+        lfo.connect(lfoG); lfoG.connect(g.gain);
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.7, t + 0.25);
+        g.gain.setValueAtTime(0.65, t + 1.8);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 2.5);
+        o.connect(g); g.connect(dest());
+        lfo.start(t); o.start(t); o.stop(t + 2.55); lfo.stop(t + 2.55);
       }
     },
     {
-      name: 'The Bubbles', emoji: '🫧', color: '#4db8ff',
+      name: 'The Surprise', emoji: '😱', color: '#ffe94d',
       fn: function(ctx) {
+        // Unexpected – starts tiny then BLASTS
         var t = ctx.currentTime;
-        for (var i = 0; i < 14; i++) {
-          var dt = i * 0.11 + Math.random() * 0.04;
-          var f  = 75 + Math.random() * 90;
-          tone(ctx, t + dt, 'sine', f * 1.6, f, 0.12, 0.22);
+        var o = ctx.createOscillator();
+        var lfo = ctx.createOscillator();
+        var lfoG = ctx.createGain();
+        var g = ctx.createGain();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(200, t);
+        o.frequency.exponentialRampToValueAtTime(80, t + 0.6);
+        lfo.frequency.value = 35; lfoG.gain.value = 0.4;
+        lfo.connect(lfoG); lfoG.connect(g.gain);
+        g.gain.setValueAtTime(0.05, t);
+        g.gain.linearRampToValueAtTime(0.05, t + 0.15); // quiet start
+        g.gain.linearRampToValueAtTime(0.9, t + 0.2);   // BLAST
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+        o.connect(g); g.connect(dest());
+        noise(ctx, t + 0.15, 0.45, 0.7, 80, 600);
+        lfo.start(t); o.start(t); o.stop(t + 0.65); lfo.stop(t + 0.65);
+      }
+    },
+    {
+      name: 'The Bathtub', emoji: '🛁', color: '#4db8ff',
+      fn: function(ctx) {
+        // Underwater bubbles – situational classic
+        var t = ctx.currentTime;
+        for (var i = 0; i < 10; i++) {
+          (function(i) {
+            var dt = i * 0.13 + Math.random() * 0.06;
+            var o = ctx.createOscillator();
+            var g = ctx.createGain();
+            var filt = ctx.createBiquadFilter();
+            filt.type = 'bandpass';
+            filt.frequency.value = 300 + Math.random() * 200;
+            filt.Q.value = 3;
+            o.type = 'sine';
+            var f = 90 + Math.random() * 60;
+            o.frequency.setValueAtTime(f * 1.3, t + dt);
+            o.frequency.exponentialRampToValueAtTime(f, t + dt + 0.12);
+            var bVol = 0.5 - i * 0.03;
+            g.gain.setValueAtTime(bVol, t + dt);
+            g.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.15);
+            o.connect(filt); filt.connect(g); g.connect(dest());
+            o.start(t + dt); o.stop(t + dt + 0.18);
+            noise(ctx, t + dt, 0.12, 0.2, 200, 800);
+          })(i);
         }
       }
     },
     {
-      name: 'The Dragon', emoji: '🐉', color: '#c94dff',
+      name: 'The Office Chair', emoji: '🪑', color: '#c94dff',
       fn: function(ctx) {
+        // Leather seat squeak + fart ambiguity
         var t = ctx.currentTime;
-        noise(ctx, t, 2.0, 0.65, 35, 180);
-        tone(ctx, t,        'sawtooth', 55,  180, 0.5, 0.45);
-        tone(ctx, t + 0.5,  'sawtooth', 180, 38,  1.5, 0.35);
+        // Chair squeak (high friction tone)
+        var sq = ctx.createOscillator();
+        var sqG = ctx.createGain();
+        sq.type = 'sawtooth';
+        sq.frequency.setValueAtTime(380, t);
+        sq.frequency.linearRampToValueAtTime(420, t + 0.05);
+        sq.frequency.linearRampToValueAtTime(360, t + 0.12);
+        sqG.gain.setValueAtTime(0.3, t);
+        sqG.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+        sq.connect(sqG); sqG.connect(dest());
+        sq.start(t); sq.stop(t + 0.2);
+        // Then the real fart underneath
+        var o = ctx.createOscillator();
+        var lfo = ctx.createOscillator();
+        var lfoG = ctx.createGain();
+        var g = ctx.createGain();
+        o.type = 'sawtooth'; o.frequency.value = 110;
+        o.frequency.exponentialRampToValueAtTime(70, t + 0.5);
+        lfo.frequency.value = 30; lfoG.gain.value = 0.35;
+        lfo.connect(lfoG); lfoG.connect(g.gain);
+        g.gain.setValueAtTime(0.55, t + 0.05);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+        o.connect(g); g.connect(dest());
+        noise(ctx, t + 0.05, 0.5, 0.4, 80, 400);
+        lfo.start(t); o.start(t); o.stop(t + 0.58); lfo.stop(t + 0.58);
       }
     },
     {
-      name: 'The Whoopee', emoji: '🪑', color: '#ffe94d',
+      name: 'The Elevator', emoji: '🛗', color: '#4dffb4',
       fn: function(ctx) {
+        // Tiny, embarrassed – full silence around you
         var t = ctx.currentTime;
-        noise(ctx, t, 0.45, 0.7, 150, 1200);
         var o = ctx.createOscillator();
+        var lfo = ctx.createOscillator();
+        var lfoG = ctx.createGain();
         var g = ctx.createGain();
-        o.type = 'square';
-        o.frequency.setValueAtTime(320, t);
-        o.frequency.exponentialRampToValueAtTime(155, t + 0.08);
-        o.frequency.setValueAtTime(295, t + 0.08);
-        o.frequency.exponentialRampToValueAtTime(165, t + 0.18);
-        o.frequency.setValueAtTime(270, t + 0.18);
-        o.frequency.exponentialRampToValueAtTime(125, t + 0.42);
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(180, t);
+        o.frequency.exponentialRampToValueAtTime(120, t + 0.22);
+        lfo.frequency.value = 38; lfoG.gain.value = 0.35;
+        lfo.connect(lfoG); lfoG.connect(g.gain);
         g.gain.setValueAtTime(0.45, t);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
         o.connect(g); g.connect(dest());
-        o.start(t); o.stop(t + 0.5);
+        noise(ctx, t, 0.22, 0.35, 120, 600);
+        lfo.start(t); o.start(t); o.stop(t + 0.25); lfo.stop(t + 0.25);
       }
-    }
+    },
+    {
+      name: 'The Finale', emoji: '🎆', color: '#ff4fa3',
+      fn: function(ctx) {
+        // Epic, multi-stage – the grand finale
+        var t = ctx.currentTime;
+        // Stage 1: build-up rumble
+        noise(ctx, t, 0.4, 0.3, 40, 200);
+        // Stage 2: main blast
+        var o = ctx.createOscillator();
+        var lfo = ctx.createOscillator();
+        var lfoG = ctx.createGain();
+        var g = ctx.createGain();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(140, t + 0.3);
+        o.frequency.exponentialRampToValueAtTime(55, t + 1.4);
+        lfo.frequency.value = 32; lfoG.gain.value = 0.5;
+        lfo.connect(lfoG); lfoG.connect(g.gain);
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.85, t + 0.35);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+        o.connect(g); g.connect(dest());
+        noise(ctx, t + 0.3, 1.1, 0.65, 70, 500);
+        // Stage 3: wet aftershock
+        noise(ctx, t + 1.1, 0.4, 0.4, 150, 900);
+        lfo.start(t); o.start(t + 0.3); o.stop(t + 1.45); lfo.stop(t + 1.45);
+      }
+    },
   ];
 
   // ── State ──────────────────────────────────────────────────────────────────

@@ -293,17 +293,25 @@ animation: cloudFloat 3s ease-out forwards;
 
   // ── Audio helpers ──────────────────────────────────────────────────────────
   let audioCtx = null;
+  let masterGain = null;
 
   function getCtx() {
     if (!audioCtx) {
       try {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = 3.0;
+        masterGain.connect(audioCtx.destination);
       } catch(e) {
         setStatus('err', '❌ Web Audio not supported');
         return null;
       }
     }
     return audioCtx;
+  }
+
+  function dest() {
+    return masterGain || audioCtx.destination;
   }
 
   function noise(ctx, t0, dur, vol, lo, hi) {
@@ -320,7 +328,7 @@ animation: cloudFloat 3s ease-out forwards;
     var g = ctx.createGain();
     g.gain.setValueAtTime(vol, t0);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    src.connect(filt); filt.connect(g); g.connect(ctx.destination);
+    src.connect(filt); filt.connect(g); g.connect(dest());
     src.start(t0); src.stop(t0 + dur + 0.05);
   }
 
@@ -332,7 +340,7 @@ animation: cloudFloat 3s ease-out forwards;
     if (fEnd) o.frequency.exponentialRampToValueAtTime(fEnd, t0 + dur);
     g.gain.setValueAtTime(vol, t0);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    o.connect(g); g.connect(ctx.destination);
+    o.connect(g); g.connect(dest());
     o.start(t0); o.stop(t0 + dur + 0.05);
   }
 
@@ -394,7 +402,7 @@ animation: cloudFloat 3s ease-out forwards;
         g.gain.linearRampToValueAtTime(0.4, t + 0.4);
         g.gain.setValueAtTime(0.35, t + 1.8);
         g.gain.linearRampToValueAtTime(0, t + 2.8);
-        o.connect(g); g.connect(ctx.destination);
+        o.connect(g); g.connect(dest());
         lfo.start(t); o.start(t); o.stop(t + 2.85); lfo.stop(t + 2.85);
       }
     },
@@ -415,7 +423,7 @@ animation: cloudFloat 3s ease-out forwards;
         o.frequency.linearRampToValueAtTime(90,  t + 0.9);
         g.gain.setValueAtTime(0.35, t);
         g.gain.exponentialRampToValueAtTime(0.0001, t + 1.0);
-        o.connect(filt); filt.connect(g); g.connect(ctx.destination);
+        o.connect(filt); filt.connect(g); g.connect(dest());
         o.start(t); o.stop(t + 1.05);
       }
     },
@@ -481,7 +489,7 @@ animation: cloudFloat 3s ease-out forwards;
         o.frequency.exponentialRampToValueAtTime(125, t + 0.42);
         g.gain.setValueAtTime(0.45, t);
         g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
-        o.connect(g); g.connect(ctx.destination);
+        o.connect(g); g.connect(dest());
         o.start(t); o.stop(t + 0.5);
       }
     }
@@ -598,43 +606,55 @@ animation: cloudFloat 3s ease-out forwards;
   }
 
   // ── Main play function ─────────────────────────────────────────────────────
+  function doPlay() {
+    var ctx = getCtx();
+    if (!ctx) return;
+
+    var idx;
+    do { idx = Math.floor(Math.random() * SOUNDS.length); }
+    while (idx === lastIdx && SOUNDS.length > 1);
+    lastIdx = idx;
+
+    var s = SOUNDS[idx];
+    try {
+      s.fn(ctx);
+      setStatus('ok', '▶ ' + s.emoji + ' ' + s.name);
+    } catch(e) {
+      setStatus('err', '❌ ' + e.message);
+      console.error(e);
+      return;
+    }
+
+    playCount++;
+    showSoundName(s);
+    animateBtn();
+    pulseRings();
+    spawnParticles(s.color);
+    spawnClouds();
+    highlightPill(idx, s);
+    updateCounter();
+  }
+
   function play() {
     if (busy) return;
     busy = true;
     setTimeout(function() { busy = false; }, 250);
 
-    var ctx = getCtx();
-    if (!ctx) return;
+    // Safari iOS: AudioContext must be created/resumed synchronously
+    // inside a user gesture handler (touchstart or touchend)
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) { setStatus('err', '❌ Web Audio not supported'); return; }
 
-    function doPlay() {
-      var idx;
-      do { idx = Math.floor(Math.random() * SOUNDS.length); }
-      while (idx === lastIdx && SOUNDS.length > 1);
-      lastIdx = idx;
-
-      var s = SOUNDS[idx];
-      try {
-        s.fn(ctx);
-        setStatus('ok', '▶ ' + s.emoji + ' ' + s.name);
-      } catch(e) {
-        setStatus('err', '❌ ' + e.message);
-        console.error(e);
-        return;
-      }
-
-      playCount++;
-      showSoundName(s);
-      animateBtn();
-      pulseRings();
-      spawnParticles(s.color);
-      spawnClouds();
-      highlightPill(idx, s);
-      updateCounter();
+    if (!audioCtx) {
+      try { audioCtx = new AC(); } catch(e) { setStatus('err', '❌ ' + e.message); return; }
     }
 
-    if (ctx.state === 'suspended') {
-      ctx.resume().then(doPlay).catch(function(e) {
-        setStatus('err', '❌ ' + e.message);
+    if (audioCtx.state === 'suspended') {
+      // resume() must be called synchronously in the gesture, then we play
+      audioCtx.resume().then(function() {
+        doPlay();
+      }).catch(function(e) {
+        setStatus('err', '❌ resume: ' + e.message);
       });
     } else {
       doPlay();
@@ -643,7 +663,6 @@ animation: cloudFloat 3s ease-out forwards;
 
   // ── Init ───────────────────────────────────────────────────────────────────
   window.addEventListener('DOMContentLoaded', function() {
-    // Build pills
     var container = document.getElementById('pills');
     SOUNDS.forEach(function(s, i) {
       var p = document.createElement('div');
@@ -658,7 +677,20 @@ animation: cloudFloat 3s ease-out forwards;
       return;
     }
 
-    document.getElementById('fartBtn').addEventListener('click', play);
+    var btn = document.getElementById('fartBtn');
+
+    // iOS Safari requires touch events, not just click
+    btn.addEventListener('touchstart', function(e) {
+      e.preventDefault(); // prevent double-firing with click
+      play();
+    }, { passive: false });
+
+    // Fallback for desktop / non-touch
+    btn.addEventListener('click', function(e) {
+      // Only fire if not already triggered by touch
+      if (!('ontouchstart' in window)) play();
+    });
+
     document.addEventListener('keydown', function(e) {
       if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); play(); }
     });

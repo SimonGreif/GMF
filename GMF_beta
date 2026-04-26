@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1a0a2e">
+<title>Guess My Fart 💨</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+:root {
+–bg: #1a0a2e;
+–card: #2d1a4a;
+–yellow: #ffe94d;
+–orange: #ff8c42;
+–pink: #ff4fa3;
+–green: #4dffb4;
+–blue: #4db8ff;
+–purple: #c94dff;
+}
+
+body {
+font-family: ‘Nunito’, sans-serif;
+background: var(–bg);
+min-height: 100dvh;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: space-between;
+overflow: hidden;
+position: relative;
+padding: 20px 16px 30px;
+}
+
+.blob {
+position: fixed;
+border-radius: 50%;
+filter: blur(80px);
+opacity: 0.18;
+pointer-events: none;
+animation: blobFloat 8s ease-in-out infinite alternate;
+}
+.blob1 { width: 300px; height: 300px; background: var(–purple); top: -80px; left: -80px; }
+.blob2 { width: 250px; height: 250px; background: var(–pink); bottom: -60px; right: -60px; animation-delay: 2s; }
+.blob3 { width: 200px; height: 200px; background: var(–green); top: 40%; left: 50%; animation-delay: 4s; }
+
+@keyframes blobFloat {
+0% { transform: translate(0,0) scale(1); }
+100% { transform: translate(30px, 20px) scale(1.1); }
+}
+
+.header {
+text-align: center;
+position: relative;
+z-index: 10;
+}
+.title {
+font-family: ‘Fredoka One’, cursive;
+font-size: clamp(2rem, 8vw, 3rem);
+color: var(–yellow);
+text-shadow: 0 0 30px rgba(255,233,77,0.5), 3px 3px 0 rgba(0,0,0,0.4);
+line-height: 1.1;
+}
+.subtitle {
+font-size: clamp(0.75rem, 3vw, 0.9rem);
+color: rgba(255,255,255,0.5);
+margin-top: 4px;
+font-weight: 700;
+letter-spacing: 2px;
+text-transform: uppercase;
+}
+
+#statusBar {
+font-size: 0.7rem;
+padding: 4px 12px;
+border-radius: 20px;
+margin-top: 8px;
+font-weight: 700;
+letter-spacing: 1px;
+display: inline-block;
+transition: all 0.3s;
+}
+.s-warn { background: rgba(255,233,77,0.15); color: var(–yellow); border: 1px solid rgba(255,233,77,0.3); }
+.s-ok   { background: rgba(77,255,180,0.15); color: var(–green);  border: 1px solid rgba(77,255,180,0.3); }
+.s-err  { background: rgba(255,79,163,0.15);  color: var(–pink);   border: 1px solid rgba(255,79,163,0.3); }
+
+.sound-display {
+position: relative;
+z-index: 10;
+text-align: center;
+min-height: 80px;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+gap: 6px;
+}
+.sound-label {
+font-size: 0.7rem;
+letter-spacing: 3px;
+text-transform: uppercase;
+color: rgba(255,255,255,0.35);
+font-weight: 700;
+}
+.sound-name {
+font-family: ‘Fredoka One’, cursive;
+font-size: clamp(1.4rem, 5vw, 2rem);
+color: white;
+transition: all 0.3s ease;
+opacity: 0;
+transform: translateY(10px);
+}
+.sound-name.visible { opacity: 1; transform: translateY(0); }
+.sound-emoji {
+font-size: 2rem;
+opacity: 0;
+transform: scale(0);
+transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.sound-emoji.visible { opacity: 1; transform: scale(1); }
+
+.button-area {
+position: relative;
+z-index: 10;
+display: flex;
+align-items: center;
+justify-content: center;
+}
+
+.fart-ring {
+position: absolute;
+border-radius: 50%;
+border: 3px solid var(–yellow);
+opacity: 0;
+pointer-events: none;
+}
+.fart-ring.animate { animation: ringPulse 0.8s ease-out forwards; }
+@keyframes ringPulse {
+0%  { width: 160px; height: 160px; opacity: 0.7; }
+100%{ width: 340px; height: 340px; opacity: 0; }
+}
+
+.fart-btn {
+width: 180px;
+height: 180px;
+border-radius: 50%;
+border: none;
+cursor: pointer;
+position: relative;
+background: radial-gradient(circle at 35% 35%, #ffe97a, #ff8c42 60%, #ff5500);
+box-shadow:
+0 0 0 6px rgba(255,233,77,0.2),
+0 0 40px rgba(255,140,66,0.4),
+0 8px 32px rgba(0,0,0,0.5),
+inset 0 -6px 20px rgba(0,0,0,0.3),
+inset 0 6px 20px rgba(255,255,255,0.2);
+transition: transform 0.1s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.1s ease;
+-webkit-user-select: none;
+user-select: none;
+touch-action: manipulation;
+}
+.fart-btn:active {
+transform: scale(0.88) !important;
+box-shadow: 0 0 0 4px rgba(255,233,77,0.1), 0 4px 16px rgba(0,0,0,0.5);
+}
+.fart-btn.shake { animation: btnShake 0.5s ease-out; }
+@keyframes btnShake {
+0%,100% { transform: scale(1) rotate(0deg); }
+15% { transform: scale(1.08) rotate(-3deg); }
+30% { transform: scale(1.05) rotate(3deg); }
+50% { transform: scale(1.02) rotate(-2deg); }
+75% { transform: scale(1.01) rotate(1deg); }
+}
+.btn-inner {
+font-size: 3.5rem;
+display: flex; align-items: center; justify-content: center;
+height: 100%;
+animation: btnBreathe 3s ease-in-out infinite;
+pointer-events: none;
+}
+@keyframes btnBreathe {
+0%,100% { transform: scale(1); }
+50% { transform: scale(1.06); }
+}
+
+.particles {
+position: fixed; top: 0; left: 0;
+width: 100%; height: 100%;
+pointer-events: none; z-index: 20; overflow: hidden;
+}
+.particle {
+position: absolute; border-radius: 50%;
+pointer-events: none;
+animation: particleFly 0.9s ease-out forwards;
+}
+@keyframes particleFly {
+0%   { opacity: 1; transform: translate(0,0) scale(1); }
+100% { opacity: 0; transform: translate(var(–tx), var(–ty)) scale(0); }
+}
+
+.counter-area {
+position: relative; z-index: 10;
+display: flex; flex-direction: column;
+align-items: center; gap: 8px;
+}
+.counter-label {
+font-size: 0.65rem; letter-spacing: 3px;
+text-transform: uppercase;
+color: rgba(255,255,255,0.3); font-weight: 700;
+}
+.counter-pills {
+display: flex; gap: 6px; flex-wrap: wrap;
+justify-content: center; max-width: 300px;
+}
+.pill {
+font-family: ‘Fredoka One’, cursive;
+font-size: 0.72rem; padding: 4px 10px;
+border-radius: 20px;
+background: rgba(255,255,255,0.07);
+color: rgba(255,255,255,0.4);
+border: 1px solid rgba(255,255,255,0.1);
+transition: all 0.3s ease;
+white-space: nowrap;
+}
+.pill.active {
+background: rgba(255,233,77,0.15);
+color: var(–yellow);
+border-color: rgba(255,233,77,0.4);
+box-shadow: 0 0 12px rgba(255,233,77,0.2);
+}
+
+.cloud {
+position: fixed; pointer-events: none;
+font-size: 2rem; opacity: 0; z-index: 5;
+animation: cloudFloat 3s ease-out forwards;
+}
+@keyframes cloudFloat {
+0%   { opacity: 0.8; transform: translateY(0) scale(0.5); }
+100% { opacity: 0;   transform: translateY(-200px) scale(1.5); }
+}
+</style>
+
+</head>
+<body>
+
+<div class="blob blob1"></div>
+<div class="blob blob2"></div>
+<div class="blob blob3"></div>
+<div class="particles" id="particles"></div>
+
+<header class="header">
+  <div class="title">💨 Guess My Fart</div>
+  <div class="subtitle">tap to rip one</div>
+  <div id="statusBar" class="s-warn">tap the button to start</div>
+</header>
+
+<div class="sound-display">
+  <div class="sound-emoji" id="soundEmoji">💨</div>
+  <div class="sound-label" id="soundLabel">—</div>
+  <div class="sound-name" id="soundName"></div>
+</div>
+
+<div class="button-area">
+  <div class="fart-ring" id="ring1"></div>
+  <div class="fart-ring" id="ring2"></div>
+  <div class="fart-ring" id="ring3"></div>
+  <button class="fart-btn" id="fartBtn" aria-label="Play fart sound">
+    <div class="btn-inner">💩</div>
+  </button>
+</div>
+
+<footer style="position:relative;z-index:10;text-align:center;font-size:0.6rem;color:rgba(255,255,255,0.2);letter-spacing:1px;">
+  Created by Šimi based on an idea with Pepé
+</footer>
+
+<div class="counter-area">
+  <div class="counter-label" id="counterLabel">ready to rip</div>
+  <div class="counter-pills" id="pills"></div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ── Audio helpers ──────────────────────────────────────────────────────────
+  let audioCtx = null;
+
+  function getCtx() {
+    if (!audioCtx) {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      } catch(e) {
+        setStatus('err', '❌ Web Audio not supported');
+        return null;
+      }
+    }
+    return audioCtx;
+  }
+
+  function noise(ctx, t0, dur, vol, lo, hi) {
+    var n = Math.ceil(ctx.sampleRate * dur);
+    var buf = ctx.createBuffer(1, n, ctx.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    var src = ctx.createBufferSource();
+    src.buffer = buf;
+    var filt = ctx.createBiquadFilter();
+    filt.type = 'bandpass';
+    filt.frequency.value = (lo + hi) / 2;
+    filt.Q.value = 0.7;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(filt); filt.connect(g); g.connect(ctx.destination);
+    src.start(t0); src.stop(t0 + dur + 0.05);
+  }
+
+  function tone(ctx, t0, type, fStart, fEnd, dur, vol) {
+    var o = ctx.createOscillator();
+    var g = ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(fStart, t0);
+    if (fEnd) o.frequency.exponentialRampToValueAtTime(fEnd, t0 + dur);
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t0); o.stop(t0 + dur + 0.05);
+  }
+
+  // ── Sound definitions ──────────────────────────────────────────────────────
+  var SOUNDS = [
+    {
+      name: 'The Sneaky One', emoji: '🤫', color: '#4dffb4',
+      fn: function(ctx) {
+        var t = ctx.currentTime;
+        noise(ctx, t, 1.4, 0.25, 60, 250);
+        tone(ctx, t, 'sawtooth', 110, 70, 1.4, 0.2);
+      }
+    },
+    {
+      name: 'The Ripper', emoji: '💥', color: '#ff4fa3',
+      fn: function(ctx) {
+        var t = ctx.currentTime;
+        noise(ctx, t, 0.5, 0.8, 80, 900);
+        tone(ctx, t, 'square', 90, 35, 0.5, 0.4);
+      }
+    },
+    {
+      name: 'The Trumpet', emoji: '🎺', color: '#ffe94d',
+      fn: function(ctx) {
+        var t = ctx.currentTime;
+        [180, 165, 148, 132, 118, 105, 92, 82].forEach(function(f, i) {
+          tone(ctx, t + i * 0.09, 'sawtooth', f, f * 0.85, 0.14, 0.35);
+        });
+      }
+    },
+    {
+      name: 'The Machine Gun', emoji: '🔫', color: '#ff8c42',
+      fn: function(ctx) {
+        var t = ctx.currentTime;
+        for (var i = 0; i < 9; i++) noise(ctx, t + i * 0.07, 0.06, 0.55, 60, 350);
+      }
+    },
+    {
+      name: 'The Squeaker', emoji: '🐭', color: '#c94dff',
+      fn: function(ctx) {
+        var t = ctx.currentTime;
+        tone(ctx, t, 'sine', 700, 180, 0.28, 0.35);
+        tone(ctx, t + 0.01, 'sine', 580, 150, 0.28, 0.15);
+      }
+    },
+    {
+      name: 'The Rumble', emoji: '🌋', color: '#4db8ff',
+      fn: function(ctx) {
+        var t = ctx.currentTime;
+        noise(ctx, t, 2.8, 0.45, 25, 100);
+        var o = ctx.createOscillator();
+        var lfo = ctx.createOscillator();
+        var lfoG = ctx.createGain();
+        var g = ctx.createGain();
+        lfo.frequency.value = 7; lfoG.gain.value = 12;
+        lfo.connect(lfoG); lfoG.connect(o.frequency);
+        o.type = 'triangle'; o.frequency.value = 55;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.4, t + 0.4);
+        g.gain.setValueAtTime(0.35, t + 1.8);
+        g.gain.linearRampToValueAtTime(0, t + 2.8);
+        o.connect(g); g.connect(ctx.destination);
+        lfo.start(t); o.start(t); o.stop(t + 2.85); lfo.stop(t + 2.85);
+      }
+    },
+    {
+      name: 'The Wet One', emoji: '💦', color: '#4dffb4',
+      fn: function(ctx) {
+        var t = ctx.currentTime;
+        noise(ctx, t, 1.0, 0.55, 100, 700);
+        var o = ctx.createOscillator();
+        var filt = ctx.createBiquadFilter();
+        var g = ctx.createGain();
+        filt.type = 'bandpass'; filt.frequency.value = 280; filt.Q.value = 2.5;
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(100, t);
+        o.frequency.linearRampToValueAtTime(135, t + 0.15);
+        o.frequency.linearRampToValueAtTime(88,  t + 0.4);
+        o.frequency.linearRampToValueAtTime(115, t + 0.65);
+        o.frequency.linearRampToValueAtTime(90,  t + 0.9);
+        g.gain.setValueAtTime(0.35, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 1.0);
+        o.connect(filt); filt.connect(g); g.connect(ctx.destination);
+        o.start(t); o.stop(t + 1.05);
+      }
+    },
+    {
+      name: 'The Silent Killer', emoji: '☠️', color: '#aaaaaa',
+      fn: function(ctx) {
+        var t = ctx.currentTime;
+        noise(ctx, t, 3.0, 0.06, 20, 80);
+        tone(ctx, t, 'sine', 28, 22, 3.0, 0.12);
+      }
+    },
+    {
+      name: 'The Opera', emoji: '🎭', color: '#ff4fa3',
+      fn: function(ctx) {
+        var t = ctx.currentTime;
+        [195, 215, 195, 175, 165, 150, 138, 128, 118].forEach(function(f, i) {
+          tone(ctx, t + i * 0.11, 'sawtooth', f, f * 0.9, 0.16, 0.3);
+        });
+      }
+    },
+    {
+      name: 'The Staccato', emoji: '🥁', color: '#ff8c42',
+      fn: function(ctx) {
+        var t = ctx.currentTime;
+        [0, 0.05, 0.09, 0.13, 0.16, 0.185, 0.205, 0.222, 0.237, 0.25, 0.262].forEach(function(dt, i) {
+          noise(ctx, t + dt, 0.04, Math.max(0.55 - i * 0.04, 0.1), 60, 500);
+        });
+      }
+    },
+    {
+      name: 'The Bubbles', emoji: '🫧', color: '#4db8ff',
+      fn: function(ctx) {
+        var t = ctx.currentTime;
+        for (var i = 0; i < 14; i++) {
+          var dt = i * 0.11 + Math.random() * 0.04;
+          var f  = 75 + Math.random() * 90;
+          tone(ctx, t + dt, 'sine', f * 1.6, f, 0.12, 0.22);
+        }
+      }
+    },
+    {
+      name: 'The Dragon', emoji: '🐉', color: '#c94dff',
+      fn: function(ctx) {
+        var t = ctx.currentTime;
+        noise(ctx, t, 2.0, 0.65, 35, 180);
+        tone(ctx, t,        'sawtooth', 55,  180, 0.5, 0.45);
+        tone(ctx, t + 0.5,  'sawtooth', 180, 38,  1.5, 0.35);
+      }
+    },
+    {
+      name: 'The Whoopee', emoji: '🪑', color: '#ffe94d',
+      fn: function(ctx) {
+        var t = ctx.currentTime;
+        noise(ctx, t, 0.45, 0.7, 150, 1200);
+        var o = ctx.createOscillator();
+        var g = ctx.createGain();
+        o.type = 'square';
+        o.frequency.setValueAtTime(320, t);
+        o.frequency.exponentialRampToValueAtTime(155, t + 0.08);
+        o.frequency.setValueAtTime(295, t + 0.08);
+        o.frequency.exponentialRampToValueAtTime(165, t + 0.18);
+        o.frequency.setValueAtTime(270, t + 0.18);
+        o.frequency.exponentialRampToValueAtTime(125, t + 0.42);
+        g.gain.setValueAtTime(0.45, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(t); o.stop(t + 0.5);
+      }
+    }
+  ];
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  var playCount = 0;
+  var lastIdx   = -1;
+  var busy      = false;
+
+  // ── UI helpers ─────────────────────────────────────────────────────────────
+  function setStatus(type, msg) {
+    var el = document.getElementById('statusBar');
+    el.className = 's-' + type;
+    el.textContent = msg;
+  }
+
+  function showSoundName(s) {
+    var n = document.getElementById('soundName');
+    var e = document.getElementById('soundEmoji');
+    document.getElementById('soundLabel').textContent = 'You just ripped:';
+    n.classList.remove('visible'); e.classList.remove('visible');
+    setTimeout(function() {
+      n.textContent = s.name;
+      n.style.color = s.color;
+      e.textContent = s.emoji;
+      n.classList.add('visible'); e.classList.add('visible');
+    }, 40);
+  }
+
+  function animateBtn() {
+    var b = document.getElementById('fartBtn');
+    b.classList.remove('shake');
+    void b.offsetWidth;
+    b.classList.add('shake');
+    b.addEventListener('animationend', function() { b.classList.remove('shake'); }, { once: true });
+  }
+
+  function pulseRings() {
+    ['ring1','ring2','ring3'].forEach(function(id, i) {
+      var el = document.getElementById(id);
+      el.classList.remove('animate');
+      void el.offsetWidth;
+      setTimeout(function() {
+        el.classList.add('animate');
+        el.addEventListener('animationend', function() { el.classList.remove('animate'); }, { once: true });
+      }, i * 90);
+    });
+  }
+
+  function spawnParticles(color) {
+    var container = document.getElementById('particles');
+    var btn = document.getElementById('fartBtn');
+    var r = btn.getBoundingClientRect();
+    var cx = r.left + r.width / 2;
+    var cy = r.top  + r.height / 2;
+    var palette = [color, '#ffe94d', '#ff4fa3', '#4dffb4', '#ffffff'];
+    for (var i = 0; i < 18; i++) {
+      var p  = document.createElement('div');
+      p.className = 'particle';
+      var sz = 6  + Math.random() * 12;
+      var a  = Math.random() * Math.PI * 2;
+      var d  = 90 + Math.random() * 160;
+      var c  = palette[Math.floor(Math.random() * palette.length)];
+      p.style.cssText = 'width:' + sz + 'px;height:' + sz + 'px;background:' + c
+        + ';left:' + (cx - sz/2) + 'px;top:' + (cy - sz/2) + 'px'
+        + ';--tx:' + (Math.cos(a)*d) + 'px;--ty:' + (Math.sin(a)*d) + 'px'
+        + ';animation-duration:' + (0.6 + Math.random()*0.4) + 's';
+      container.appendChild(p);
+      p.addEventListener('animationend', function() { this.remove(); });
+    }
+  }
+
+  function spawnClouds() {
+    var icons = ['💨','💨','✨','🌿'];
+    for (var i = 0; i < 3; i++) {
+      (function(delay) {
+        setTimeout(function() {
+          var c = document.createElement('div');
+          c.className = 'cloud';
+          c.textContent = icons[Math.floor(Math.random()*icons.length)];
+          c.style.left = (15 + Math.random()*65) + '%';
+          c.style.top  = (25 + Math.random()*45) + '%';
+          c.style.animationDuration = (2 + Math.random()) + 's';
+          document.body.appendChild(c);
+          c.addEventListener('animationend', function() { c.remove(); });
+        }, delay);
+      })(i * 140);
+    }
+  }
+
+  function highlightPill(idx, s) {
+    document.querySelectorAll('.pill').forEach(function(p) {
+      p.classList.remove('active');
+      p.style.cssText = '';
+    });
+    var p = document.getElementById('pill-' + idx);
+    if (p) {
+      p.classList.add('active');
+      p.style.borderColor = s.color + '88';
+      p.style.color       = s.color;
+      p.style.background  = s.color + '22';
+      setTimeout(function() { p.classList.remove('active'); p.style.cssText = ''; }, 2200);
+    }
+  }
+
+  function updateCounter() {
+    var msgs = ['', 'First blood! 🎉', 'Getting started 👀', 'Warming up 🔥', 'No shame 😂', 'Prolific 💪'];
+    var el = document.getElementById('counterLabel');
+    if (playCount < msgs.length) el.textContent = msgs[playCount];
+    else if (playCount < 15)     el.textContent = playCount + ' rips 💨';
+    else if (playCount < 25)     el.textContent = playCount + ' rips 🤢';
+    else                         el.textContent = playCount + ' rips — seek help 💀';
+  }
+
+  // ── Main play function ─────────────────────────────────────────────────────
+  function play() {
+    if (busy) return;
+    busy = true;
+    setTimeout(function() { busy = false; }, 250);
+
+    var ctx = getCtx();
+    if (!ctx) return;
+
+    function doPlay() {
+      var idx;
+      do { idx = Math.floor(Math.random() * SOUNDS.length); }
+      while (idx === lastIdx && SOUNDS.length > 1);
+      lastIdx = idx;
+
+      var s = SOUNDS[idx];
+      try {
+        s.fn(ctx);
+        setStatus('ok', '▶ ' + s.emoji + ' ' + s.name);
+      } catch(e) {
+        setStatus('err', '❌ ' + e.message);
+        console.error(e);
+        return;
+      }
+
+      playCount++;
+      showSoundName(s);
+      animateBtn();
+      pulseRings();
+      spawnParticles(s.color);
+      spawnClouds();
+      highlightPill(idx, s);
+      updateCounter();
+    }
+
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(doPlay).catch(function(e) {
+        setStatus('err', '❌ ' + e.message);
+      });
+    } else {
+      doPlay();
+    }
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', function() {
+    // Build pills
+    var container = document.getElementById('pills');
+    SOUNDS.forEach(function(s, i) {
+      var p = document.createElement('div');
+      p.className = 'pill';
+      p.id = 'pill-' + i;
+      p.textContent = s.emoji + ' ' + s.name;
+      container.appendChild(p);
+    });
+
+    if (!window.AudioContext && !window.webkitAudioContext) {
+      setStatus('err', '❌ Web Audio API not supported');
+      return;
+    }
+
+    document.getElementById('fartBtn').addEventListener('click', play);
+    document.addEventListener('keydown', function(e) {
+      if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); play(); }
+    });
+  });
+
+})();
+</script>
+
+</body>
+</html>
